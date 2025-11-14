@@ -1,103 +1,220 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Simple Flow</title>
-  <link rel="stylesheet" href="popup.css">
+  <title>Redundancy Ray (AU)</title>
 
-  <style>
-    /* Website version overrides */
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    }
+  <!-- Ray as tab icon -->
+  <link rel="icon" type="image/png" href="ray.png" />
 
-    /* Wider chart, narrower text area */
-    .grid {
-      display: grid;
-      grid-template-columns: 0.33fr 0.67fr; /* ~1/3 text | 2/3 flowchart */
-      gap: 12px;
-      padding: 12px;
-      height: calc(100vh - 120px);
-    }
-
-    #steps {
-      width: 100%;
-      height: 100%;
-      resize: none;
-      background: #10121a;
-      border: 1px solid #23283a;
-      border-radius: 8px;
-      padding: 10px;
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.35;
-    }
-
-    #canvasWrap {
-      width: 100%;
-      height: 100%;
-      background: #0e1017;
-      border: 1px solid #23283a;
-      border-radius: 8px;
-      overflow: auto;
-    }
-
-    footer {
-      padding: 10px;
-      background: var(--panel);
-      border-top: 1px solid #222533;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-  <header>
-    <h1>Simple Flow</h1>
-    <div class="row">
-      <button id="sample">Load sample</button>
-      <label>
-        <input type="checkbox" id="autoStartEnd" checked>
-        Auto “Start/End”
-      </label>
-      <button id="render">Render</button>
-      <button id="downloadPng">Export PNG</button>
-      <button id="downloadSvg">Export SVG</button>
-      <button id="copyPng">Copy image</button> <!-- Copy button -->
-    </div>
-  </header>
+  <div class="app">
 
-  <section class="grid">
-    <textarea id="steps" spellcheck="false" placeholder="Enter steps, one per line.
+    <!-- Header -->
+    <header class="pad hero">
+      <div class="hero-left">
+        <img src="ray.png" alt="Ray, your redundancy guide" class="ray-avatar" />
+      </div>
+      <div class="hero-right">
+        <h1>Redundancy Ray</h1>
+        <p class="sub">Friendly AU redundancy payout helper</p>
+        <p class="tagline small muted">
+          Ray helps you estimate your redundancy and leave payouts, so it feels a little less scary.
+        </p>
+      </div>
+    </header>
 
-Process step:
-  Walk into café
+    <!-- Inputs -->
+    <section class="card pad">
+      <div class="stack s8">
 
-Inline decision:
-  [?] Do I want a hot drink? | Yes -> Order coffee | No -> Order iced drink
+        <label class="lbl">
+          <span>Full years with company</span>
+          <input type="number" id="fullYears" min="0" step="1" placeholder="e.g. 6" />
+        </label>
 
-Decision block (D.):
-  D. Is there a queue?
-  Yes = Wait in line
-  No = Order immediately
-"></textarea>
+        <div class="row s8">
+          <label class="lbl grow">
+            <span>Annual leave hours accrued</span>
+            <input type="number" id="alHours" min="0" step="0.01" placeholder="e.g. 120" />
+          </label>
 
-    <div id="canvasWrap">
-      <svg id="chart" xmlns="http://www.w3.org/2000/svg"></svg>
-    </div>
-  </section>
+          <label class="lbl">
+            <span>Std hrs/wk</span>
+            <input type="number" id="hoursPerWeek" min="1" step="1" value="38" />
+          </label>
+        </div>
 
-  <footer>
-    <!-- popup.js populates the Key/Syntax here -->
-    <div id="syntax"></div>
-  </footer>
+        <label class="lbl">
+          <span>Annual salary (AUD)</span>
+          <input type="number" id="annualSalary" min="0" step="0.01" placeholder="e.g. 80000" />
+        </label>
 
-  <script src="popup.js"></script>
+        <div class="row s8">
+          <label class="lbl grow">
+            <span>Age group for tax</span>
+            <select id="ageGroup">
+              <option value="under60">Under 60</option>
+              <option value="60plus">60 or older</option>
+            </select>
+          </label>
+
+          <label class="lbl">
+            <span>Est. marginal tax rate (%)</span>
+            <input type="number" id="marginalRate" min="0" max="60" step="1" value="32" />
+          </label>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section class="card pad result">
+
+      <div class="muted small" id="totalLabel">
+        Estimated payout (before tax)
+      </div>
+
+      <div class="total" id="totalOut">—</div>
+
+      <!-- After-tax toggle -->
+      <div class="row after-tax-toggle">
+        <span class="muted small">Show after-tax amounts</span>
+        <label class="switch">
+          <input type="checkbox" id="afterTaxToggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <details class="breakdown">
+        <summary>Breakdown</summary>
+
+        <div class="stack s6">
+
+          <div class="row">
+            <span class="muted">Years of service</span>
+            <strong id="yearsOut">—</strong>
+          </div>
+
+          <div class="row">
+            <span class="muted">Redundancy weeks</span>
+            <strong id="redundancyWeeksOut">—</strong>
+          </div>
+
+          <div class="row">
+            <span class="muted">Weekly rate</span>
+            <strong id="weeklyRateOut">—</strong>
+          </div>
+
+          <div class="row">
+            <span class="muted">Redundancy pay (gross)</span>
+            <strong id="redundancyPayOut">—</strong>
+          </div>
+
+          <div class="row">
+            <span class="muted">Hourly rate</span>
+            <strong id="hourlyRateOut">—</strong>
+          </div>
+
+          <div class="row">
+            <span class="muted">Annual leave payout (gross)</span>
+            <strong id="alPayoutOut">—</strong>
+          </div>
+
+          <hr class="divider" />
+
+          <!-- Tax section (hidden until toggle) -->
+          <div id="taxSection" class="tax-section hidden">
+
+            <div class="row">
+              <span class="muted">Tax-free redundancy (approx)</span>
+              <strong id="taxFreeRedundancyOut">—</strong>
+            </div>
+
+            <div class="row">
+              <span class="muted">Taxable redundancy (ETP)</span>
+              <strong id="taxableRedundancyOut">—</strong>
+            </div>
+
+            <div class="row">
+              <span class="muted">Tax on redundancy (ETP)</span>
+              <strong id="redundancyTaxOut">—</strong>
+            </div>
+
+            <div class="row">
+              <span class="muted">Redundancy after tax</span>
+              <strong id="redundancyAfterTaxOut">—</strong>
+            </div>
+
+            <div class="row">
+              <span class="muted">Tax on annual leave (approx)</span>
+              <strong id="alTaxOut">—</strong>
+            </div>
+
+            <div class="row">
+              <span class="muted">Annual leave after tax</span>
+              <strong id="alAfterTaxOut">—</strong>
+            </div>
+
+            <div class="row">
+              <span class="muted">Total after tax (approx)</span>
+              <strong id="totalAfterTaxOut">—</strong>
+            </div>
+
+          </div>
+
+        </div>
+      </details>
+
+      <button id="copyBtn" class="copy">Copy summary</button>
+
+      <p class="note tiny">
+        Estimates only — based on 2024–25 ATO thresholds for genuine redundancy and simple
+        assumptions for leave tax. Actual entitlements and tax depend on awards/agreements,
+        small-business exemptions, notice, LSL, and your full tax position.
+      </p>
+
+    </section>
+
+    <!-- Redundancy table -->
+    <section class="pad">
+      <details class="tableDetails">
+        <summary>Redundancy weeks table</summary>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Continuous service</th><th>Weeks</th></tr>
+            </thead>
+
+            <tbody>
+              <tr><td>≥1 &lt;2 years</td><td>4</td></tr>
+              <tr><td>≥2 &lt;3 years</td><td>6</td></tr>
+              <tr><td>≥3 &lt;4 years</td><td>7</td></tr>
+              <tr><td>≥4 &lt;5 years</td><td>8</td></tr>
+              <tr><td>≥5 &lt;6 years</td><td>10</td></tr>
+              <tr><td>≥6 &lt;7 years</td><td>11</td></tr>
+              <tr><td>≥7 &lt;8 years</td><td>13</td></tr>
+              <tr><td>≥8 &lt;9 years</td><td>14</td></tr>
+              <tr><td>≥9 &lt;10 years</td><td>16</td></tr>
+              <tr><td>≥10 years</td><td>12*</td></tr>
+            </tbody>
+          </table>
+
+          <p class="hint tiny">*Per your provided table.</p>
+        </div>
+      </details>
+    </section>
+
+    <footer class="pad foot">
+      <small class="muted tiny">Redundancy Ray (AU) • Estimates only</small>
+    </footer>
+
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
