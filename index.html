@@ -18,9 +18,10 @@
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
 
+    /* Wider chart, narrower text area */
     .grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 0.33fr 0.67fr; /* ~1/3 text | 2/3 flowchart */
       gap: 12px;
       padding: 12px;
       height: calc(100vh - 120px);
@@ -30,11 +31,21 @@
       width: 100%;
       height: 100%;
       resize: none;
+      background: #10121a;
+      border: 1px solid #23283a;
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.35;
     }
 
     #canvasWrap {
       width: 100%;
       height: 100%;
+      background: #0e1017;
+      border: 1px solid #23283a;
+      border-radius: 8px;
       overflow: auto;
     }
 
@@ -51,7 +62,10 @@
     <h1>Simple Flow</h1>
     <div class="row">
       <button id="sample">Load sample</button>
-      <label><input type="checkbox" id="autoStartEnd" checked> Auto “Start/End”</label>
+      <label>
+        <input type="checkbox" id="autoStartEnd" checked>
+        Auto “Start/End”
+      </label>
       <button id="render">Render</button>
       <button id="downloadPng">Export PNG</button>
       <button id="downloadSvg">Export SVG</button>
@@ -79,7 +93,7 @@ Decision block (D.):
   </section>
 
   <footer>
-    <!-- popup.js will fill this with the updated Syntax/Key -->
+    <!-- popup.js populates the Key/Syntax here -->
     <div id="syntax"></div>
   </footer>
 
