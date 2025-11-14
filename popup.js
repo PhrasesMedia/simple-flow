@@ -25,16 +25,19 @@ const sampleBtn = document.getElementById('sample');
 if (sampleBtn) sampleBtn.addEventListener('click', () => {
   // Neutral, non-work sample
   stepsEl.value = [
-    "1. Walk into café",
-    "2. Look at the menu",
-    "D. Do I want a hot drink",
-    "Yes = Order coffee",
-    "No = Order an iced drink"
+    "1. I want a coffee",
+    "D. Is the cafe open?",
+    "Yes = Get coffee",
+    "No = Make it at home"
   ].join("\n");
   render();
 });
 document.getElementById('downloadPng').addEventListener('click', downloadPNG);
 document.getElementById('downloadSvg').addEventListener('click', downloadSVG);
+
+// NEW: copy image button (if present)
+const copyPngBtn = document.getElementById('copyPng');
+if (copyPngBtn) copyPngBtn.addEventListener('click', copyPNGToClipboard);
 
 // ---------- Debounce ----------
 function debounce(fn, delay = 250) {
@@ -460,6 +463,46 @@ function downloadSVG() {
   const src = serializer.serializeToString(clone);
   const blob = new Blob([src], {type: 'image/svg+xml;charset=utf-8'});
   triggerDownload(URL.createObjectURL(blob), 'flowchart.svg');
+}
+
+// NEW: copy PNG directly to clipboard
+function copyPNGToClipboard() {
+  if (!navigator.clipboard || !window.ClipboardItem) {
+    alert('Copying images is not supported in this browser. Please use Export PNG instead.');
+    return;
+  }
+
+  const { clone, width, height } = normalizeSVGForExport(chart);
+
+  // white background
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+  bg.setAttribute('width', width); bg.setAttribute('height', height);
+  bg.setAttribute('fill', '#ffffff');
+  clone.insertBefore(bg, clone.firstChild);
+
+  const serializer = new XMLSerializer();
+  const src = serializer.serializeToString(clone);
+  const img = new Image();
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    canvas.toBlob(async blob => {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+        alert('Flowchart copied to clipboard as an image.');
+      } catch (err) {
+        console.error(err);
+        alert('Could not copy image. Please use Export PNG instead.');
+      }
+    });
+  };
+  img.src = url;
 }
 
 function triggerDownload(url, filename) {
