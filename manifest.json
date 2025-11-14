@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Flowchart From Steps",
+  "version": "1.1.0",
+  "description": "Type steps; get a flowchart SVG. Supports decisions via [?] inline or D. blocks.",
+  "action": { "default_popup": "popup.html" },
+  "permissions": ["storage"]
+}

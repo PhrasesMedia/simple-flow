@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Flow</title>
+  <link rel="stylesheet" href="popup.css">
+
+  <style>
+    /* Website version overrides */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 12px;
+      height: calc(100vh - 120px);
+    }
+
+    #steps {
+      width: 100%;
+      height: 100%;
+      resize: none;
+    }
+
+    #canvasWrap {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+    }
+
+    footer {
+      padding: 10px;
+      background: var(--panel);
+      border-top: 1px solid #222533;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Simple Flow</h1>
+    <div class="row">
+      <button id="sample">Load sample</button>
+      <label><input type="checkbox" id="autoStartEnd" checked> Auto “Start/End”</label>
+      <button id="render">Render</button>
+      <button id="downloadPng">Export PNG</button>
+      <button id="downloadSvg">Export SVG</button>
+    </div>
+  </header>
+
+  <section class="grid">
+    <textarea id="steps" spellcheck="false" placeholder="Enter steps, one per line.
+
+Process step:
+  Walk into café
+
+Inline decision:
+  [?] Do I want a hot drink? | Yes -> Order coffee | No -> Order iced drink
+
+Decision block (D.):
+  D. Is there a queue?
+  Yes = Wait in line
+  No = Order immediately
+"></textarea>
+
+    <div id="canvasWrap">
+      <svg id="chart" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </section>
+
+  <footer>
+    <!-- popup.js will fill this with the updated Syntax/Key -->
+    <div id="syntax"></div>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
