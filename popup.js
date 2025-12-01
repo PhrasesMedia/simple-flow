@@ -277,10 +277,18 @@ function renderSVG(layoutData) {
     g.appendChild(t);
   }
 
+  // >>> UPDATED: mark decision branch lines as connector-line
   function drawLabeledLine(a, b, label, sideBias = 0) {
     g.appendChild(svg('line', {
-      x1: a.x, y1: a.y, x2: b.x, y2: b.y,
-      stroke: COLORS.arrow, 'stroke-width': 1.6, 'marker-end': 'url(#arrow)'
+      x1: a.x,
+      y1: a.y,
+      x2: b.x,
+      y2: b.y,
+      stroke: COLORS.arrow,
+      'stroke-width': 1.6,
+      'marker-end': 'url(#arrow)',
+      class: 'connector-line',
+      'data-connector': '1'
     }));
     const midx = (a.x + b.x) / 2 + (sideBias * 12);
     const midy = (a.y + b.y) / 2 - 10;
@@ -330,21 +338,71 @@ function renderSVG(layoutData) {
       if (right) drawLabeledLine(dec.right, centers.get(right.id).top, (cur.rightLabel || 'No'),  +1);
 
       if (merge && centers.get(left.id) && centers.get(merge.id))
-        g.appendChild(svg('line', { x1: centers.get(left.id).bottom.x, y1: centers.get(left.id).bottom.y, x2: centers.get(merge.id).top.x, y2: centers.get(merge.id).top.y, stroke: COLORS.arrow, 'stroke-width': 1.6, 'marker-end': 'url(#arrow)'}));
+        g.appendChild(svg('line', {
+          x1: centers.get(left.id).bottom.x,
+          y1: centers.get(left.id).bottom.y,
+          x2: centers.get(merge.id).top.x,
+          y2: centers.get(merge.id).top.y,
+          stroke: COLORS.arrow,
+          'stroke-width': 1.6,
+          'marker-end': 'url(#arrow)',
+          class: 'connector-line',
+          'data-connector': '1'
+        }));
       if (merge && centers.get(right.id) && centers.get(merge.id))
-        g.appendChild(svg('line', { x1: centers.get(right.id).bottom.x, y1: centers.get(right.id).bottom.y, x2: centers.get(merge.id).top.x, y2: centers.get(merge.id).top.y, stroke: COLORS.arrow, 'stroke-width': 1.6, 'marker-end': 'url(#arrow)'}));
+        g.appendChild(svg('line', {
+          x1: centers.get(right.id).bottom.x,
+          y1: centers.get(right.id).bottom.y,
+          x2: centers.get(merge.id).top.x,
+          y2: centers.get(merge.id).top.y,
+          stroke: COLORS.arrow,
+          'stroke-width': 1.6,
+          'marker-end': 'url(#arrow)',
+          class: 'connector-line',
+          'data-connector': '1'
+        }));
 
       const prev = placed[i - 1];
-      if (prev) g.appendChild(svg('line', { x1: centers.get(prev.id).bottom.x, y1: centers.get(prev.id).bottom.y, x2: dec.top.x, y2: dec.top.y, stroke: COLORS.arrow, 'stroke-width': 1.6, 'marker-end': 'url(#arrow)'}));
+      if (prev) g.appendChild(svg('line', {
+        x1: centers.get(prev.id).bottom.x,
+        y1: centers.get(prev.id).bottom.y,
+        x2: dec.top.x,
+        y2: dec.top.y,
+        stroke: COLORS.arrow,
+        'stroke-width': 1.6,
+        'marker-end': 'url(#arrow)',
+        class: 'connector-line',
+        'data-connector': '1'
+      }));
 
       const afterMerge = placed[i + 4];
-      if (afterMerge) g.appendChild(svg('line', { x1: centers.get(merge.id).bottom.x, y1: centers.get(merge.id).bottom.y, x2: centers.get(afterMerge.id).top.x, y2: centers.get(afterMerge.id).top.y, stroke: COLORS.arrow, 'stroke-width': 1.6, 'marker-end': 'url(#arrow)'}));
+      if (afterMerge) g.appendChild(svg('line', {
+        x1: centers.get(merge.id).bottom.x,
+        y1: centers.get(merge.id).bottom.y,
+        x2: centers.get(afterMerge.id).top.x,
+        y2: centers.get(afterMerge.id).top.y,
+        stroke: COLORS.arrow,
+        'stroke-width': 1.6,
+        'marker-end': 'url(#arrow)',
+        class: 'connector-line',
+        'data-connector': '1'
+      }));
 
       i += 3;
     } else {
       const a = centers.get(cur.id)?.bottom;
       const b = centers.get(nxt.id)?.top;
-      if (a && b) g.appendChild(svg('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: COLORS.arrow, 'stroke-width': 1.6, 'marker-end': 'url(#arrow)'}));
+      if (a && b) g.appendChild(svg('line', {
+        x1: a.x,
+        y1: a.y,
+        x2: b.x,
+        y2: b.y,
+        stroke: COLORS.arrow,
+        'stroke-width': 1.6,
+        'marker-end': 'url(#arrow)',
+        class: 'connector-line',
+        'data-connector': '1'
+      }));
     }
   }
 
@@ -395,6 +453,59 @@ function render() {
   const L = layout(nodes);
   renderSVG(L);
 }
+
+// ================== Cut-connectors-by-drag interaction ==================
+
+let isCutDragging = false;
+let activePointerId = null;
+
+// Helper: if pointer is over a connector line, remove it
+function cutAtPoint(clientX, clientY) {
+  const el = document.elementFromPoint(clientX, clientY);
+  if (!el) return;
+
+  if (
+    el.tagName &&
+    el.tagName.toLowerCase() === 'line' &&
+    el.getAttribute('data-connector') === '1'
+  ) {
+    if (el.parentNode) {
+      el.parentNode.removeChild(el);
+    }
+  }
+}
+
+// Start cutting on primary-button down inside the chart
+chart.addEventListener('pointerdown', (e) => {
+  // If you want this only while holding Shift, uncomment next line:
+  // if (!e.shiftKey) return;
+
+  if (e.button !== 0) return; // only left/primary button
+  isCutDragging = true;
+  activePointerId = e.pointerId;
+  chart.setPointerCapture(e.pointerId);
+
+  cutAtPoint(e.clientX, e.clientY);
+});
+
+chart.addEventListener('pointermove', (e) => {
+  if (!isCutDragging || e.pointerId !== activePointerId) return;
+  cutAtPoint(e.clientX, e.clientY);
+});
+
+function endCutDrag(e) {
+  if (!isCutDragging || e.pointerId !== activePointerId) return;
+  isCutDragging = false;
+  activePointerId = null;
+  try {
+    chart.releasePointerCapture(e.pointerId);
+  } catch (_) {
+    // ignore if capture wasn't set
+  }
+}
+
+chart.addEventListener('pointerup', endCutDrag);
+chart.addEventListener('pointercancel', endCutDrag);
 
 // ============================== Export =====================================
 // Normalize + color-flip branch labels so exports are centered and readable.
