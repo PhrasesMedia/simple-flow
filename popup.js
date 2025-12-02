@@ -89,7 +89,7 @@ function parseLines(text, withStartEnd = true) {
 
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i] ?? '';
-       const trimmed = line.trim();
+    const trimmed = line.trim();
     if (!trimmed) continue;
 
     if (isInlineDecision(trimmed)) {
@@ -227,7 +227,7 @@ function attachNodeClick(nodeGroup) {
 
 // Actual click handler for marking/unmarking problem nodes
 function handleNodeClick(e) {
-  // Don't let this bubble up and interfere with other handlers on the chart
+  // Don't let this bubble up and interfere with chart pointer handlers
   e.stopPropagation();
 
   const el = e.currentTarget; // <g class="node-group ...">
@@ -240,7 +240,7 @@ function handleNodeClick(e) {
   const isProblem = el.getAttribute('data-problem') === '1';
 
   if (!isProblem) {
-    // Store original colours so exports can still work correctly
+    // Store original colours so we can restore later
     shape.setAttribute('data-original-fill', shape.getAttribute('fill') || '');
     shape.setAttribute('data-original-stroke', shape.getAttribute('stroke') || '');
 
@@ -249,9 +249,8 @@ function handleNodeClick(e) {
     shape.setAttribute('stroke', '#b91c1c');
 
     el.setAttribute('data-problem', '1');
-    el.classList.add('problem-node');   // matches your CSS in index.html
+    el.classList.add('problem-node');   // hook for CSS if you want
   } else {
-    // Restore original colours
     const origFill = shape.getAttribute('data-original-fill');
     const origStroke = shape.getAttribute('data-original-stroke');
 
@@ -651,12 +650,20 @@ function cutAtPoint(clientX, clientY) {
   }
 }
 
-// Start cutting on primary-button down inside the chart
+// Start cutting ONLY when pointer goes down on a connector line
 chart.addEventListener('pointerdown', (e) => {
-  // If you want this only while holding Shift, uncomment next line:
-  // if (!e.shiftKey) return;
-
   if (e.button !== 0) return; // only left/primary button
+
+  const t = e.target;
+  const isConnector =
+    t &&
+    t.tagName &&
+    t.tagName.toLowerCase() === 'line' &&
+    t.getAttribute('data-connector') === '1';
+
+  // If not on a connector line, don't start cut-drag; allow normal node clicks
+  if (!isConnector) return;
+
   isCutDragging = true;
   activePointerId = e.pointerId;
   chart.setPointerCapture(e.pointerId);
@@ -697,6 +704,7 @@ function normalizeSVGForExport(srcSvg) {
   // translate content to 0,0
   const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   wrapper.setAttribute('transform', `translate(${-vb.x}, ${-vb.y})`);
+  while (clone.firstChild) wrapper.appendChild(wrapper.firstChild);
   while (clone.firstChild) wrapper.appendChild(clone.firstChild);
   clone.appendChild(wrapper);
 
@@ -797,4 +805,4 @@ function triggerDownload(url, filename) {
   a.href = url; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-// ===========================================================================
+// =========================================================================== 
