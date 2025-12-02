@@ -1,148 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Simple Flow – Flowchart Builder</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>Simple Flow – Flowchart Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<style>
-  body {
-    margin: 0;
-    padding: 0;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    background: #f7f7f7;
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-  }
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-  .container {
-    display: flex;
-    width: 100%;
-    height: 100%;
-  }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background: #f7f7f7;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      color: #111827;
+    }
 
-  /* Left column */
-  .left {
-    width: 320px;
-    background: #ffffff;
-    border-right: 1px solid #ddd;
-    padding: 16px;
-    box-sizing: border-box;
-    overflow-y: auto;
-  }
+    .container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
 
-  h2 {
-    margin-top: 0;
-    margin-bottom: 12px;
-  }
+    /* Left column */
+    .left {
+      width: 320px;
+      background: #ffffff;
+      border-right: 1px solid #e5e7eb;
+      padding: 16px;
+      overflow-y: auto;
+    }
 
-  textarea {
-    width: 100%;
-    height: 260px;
-    font-family: monospace;
-    font-size: 13px;
-    padding: 8px;
-    box-sizing: border-box;
-    resize: vertical;
-  }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 18px;
+      font-weight: 600;
+    }
 
-  button {
-    width: 100%;
-    margin-top: 8px;
-    padding: 10px;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  button:hover {
-    background: #1e4ecf;
-  }
+    label {
+      font-size: 13px;
+      color: #374151;
+    }
 
-  label {
-    display: flex;
-    align-items: center;
-    margin-top: 10px;
-    font-size: 13px;
-  }
+    textarea {
+      width: 100%;
+      height: 180px;
+      resize: vertical;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.4;
+    }
 
-  #syntax {
-    margin-top: 16px;
-    padding: 12px;
-    background: #f1f5f9;
-    border-radius: 6px;
-    font-size: 14px;
-    line-height: 1.4;
-  }
+    textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
+    }
 
-  /* Right side (chart) */
-  .right {
-    flex: 1;
-    background: #1e1e1e;
-    position: relative;
-    overflow: auto;
-  }
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-  #chart {
-    width: 100%;
-    height: 100%;
-    display: block;
-    cursor: crosshair;
-  }
+    .controls-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
 
-  /* NEW: Click-to-mark-problem (turn step/decision red) */
-  #chart .node-group.problem-node rect,
-  #chart .node-group.problem-node path {
-    fill: #fecaca !important;   /* light red */
-    stroke: #b91c1c !important; /* deep red border */
-  }
+    .controls-right {
+      display: flex;
+      gap: 8px;
+    }
 
-</style>
+    button {
+      border-radius: 999px;
+      border: 1px solid #1d4ed8;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    button.secondary {
+      border-color: #d1d5db;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    button:hover {
+      filter: brightness(0.96);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .checkbox-label input {
+      width: 14px;
+      height: 14px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+
+    /* Saved flows panel */
+    .saved-flows {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px dashed #e5e7eb;
+    }
+
+    .saved-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #374151;
+    }
+
+    .saved-toggle input {
+      width: 14px;
+      height: 14px;
+    }
+
+    .saved-block {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+
+    .saved-block button {
+      font-size: 11px;
+      padding: 5px 10px;
+    }
+
+    .saved-hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 12px;
+      background: #ffffff;
+    }
+
+    /* Syntax panel */
+    .syntax {
+      margin-top: 14px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      font-size: 11px;
+      color: #4b5563;
+    }
+
+    .syntax h3 {
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .syntax code {
+      background: #e5e7eb;
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-size: 11px;
+    }
+
+    /* Right column */
+    .right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .chart-wrapper {
+      flex: 1;
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      overflow: auto;
+      position: relative;
+    }
+
+    #chart {
+      min-width: 100%;
+      min-height: 100%;
+    }
+
+    .chart-empty {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: #9ca3af;
+      pointer-events: none;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #6b7280;
+      padding: 0 2px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #1d4ed8;
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
+  <div class="container">
+    <!-- Left side: Steps + Saved flows + Syntax -->
+    <div class="left">
+      <h2>Simple Flow</h2>
 
-  <!-- LEFT PANEL -->
-  <div class="left">
+      <label for="steps">Steps (one per line)</label>
+      <textarea id="steps" placeholder="1. Start&#10;2. Do something&#10;3. Ask a question?&#10;4. End"></textarea>
 
-    <h2>Simple Flow</h2>
+      <div class="controls">
+        <div class="controls-left">
+          <label class="checkbox-label">
+            <input type="checkbox" id="autoStartEnd" checked />
+            <span>Auto add Start/End</span>
+          </label>
+        </div>
+        <div class="controls-right">
+          <button id="render" type="button">Render flow</button>
+        </div>
+      </div>
 
-    <textarea id="steps" placeholder="Enter steps...
+      <!-- Saved flows toggle + controls -->
+      <div class="saved-flows">
+        <label class="saved-toggle">
+          <input type="checkbox" id="savedToggle" />
+          <span>Show saved flowcharts</span>
+        </label>
 
-Example:
-1. Start task
-D. Condition?
-Yes = Go here
-No = Go there
-"></textarea>
+        <div id="savedBlock" class="saved-block" style="display:none;">
+          <div style="display:flex; gap:6px; margin-bottom:6px;">
+            <button id="saveFlowBtn" type="button" class="secondary">Save current</button>
+            <button id="deleteFlowBtn" type="button" class="secondary">Delete</button>
+          </div>
 
-    <label>
-      <input type="checkbox" id="autoStartEnd" checked style="margin-right:6px;">
-      Auto Start/End
-    </label>
+          <select id="savedSelect">
+            <option value="">No saved flows yet</option>
+          </select>
 
-    <button id="render">Render</button>
-    <button id="sample">Load Sample</button>
-    <button id="downloadPng">Download PNG</button>
-    <button id="copyPng">Copy PNG</button>
-    <button id="downloadSvg">Download SVG</button>
+          <p class="saved-hint">
+            Saved in this browser only (Simple Flow).
+          </p>
+        </div>
+      </div>
 
-    <div id="syntax"></div>
+      <!-- Syntax / help panel -->
+      <div id="syntax" class="syntax">
+        <h3>Syntax quick guide</h3>
+        <ul style="padding-left:16px; margin:0;">
+          <li>Each line is a step.</li>
+          <li>Lines containing <code>?</code> become decision diamonds.</li>
+          <li>Lines starting with <code>Start</code> or <code>End</code> use start/end shape.</li>
+          <li><code>Auto add Start/End</code> will insert them if missing.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right side: Chart -->
+    <div class="right">
+      <div class="chart-header">
+        <span>Rendered flowchart</span>
+        <span class="badge">
+          <span class="badge-dot"></span>
+          Local only
+        </span>
+      </div>
+      <div class="chart-wrapper">
+        <div id="chart"></div>
+        <div id="chartEmpty" class="chart-empty">
+          Enter some steps and click “Render flow”.
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- RIGHT PANEL -->
-  <div class="right">
-    <svg id="chart"></svg>
-  </div>
-
-</div>
-
-<!-- Load all logic -->
-<script src="popup.js"></script>
-
+  <script src="popup.js"></script>
 </body>
 </html>
