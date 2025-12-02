@@ -1,161 +1,32 @@
-/* ---------- Layout ---------- */
-
-* {
-  box-sizing: border-box;
+:root {
+  --bg: #0b0c0f;
+  --panel: #171821;
+  --text: #e8eaf0;
+  --muted: #9aa3b2;
+  --accent: #6ea8fe;
+  --ok: #a7e0b3;
+  --decision: #ffe08a;
+  --process: #b7d2ff;
 }
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, sans-serif;
-  background: #020617;
-  color: #e5e7eb;
-  height: 100vh;
-  overflow: hidden;
-}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; width: 820px; height: 560px; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+h1 { font-size: 16px; margin: 0; font-weight: 600; }
+header { padding: 10px; background: var(--panel); border-bottom: 1px solid #222533; position: sticky; top: 0; z-index: 2; }
+.row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+button { background: #2a2d3a; color: var(--text); border: 1px solid #2f3446; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+label { color: var(--muted); font-size: 12px; }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; height: calc(100% - 88px); }
+#steps { width: 100%; height: 100%; background: #10121a; color: var(--text); border: 1px solid #23283a; border-radius: 8px; padding: 10px; line-height: 1.35; resize: none; }
+#canvasWrap { background: #0e1017; border: 1px solid #23283a; border-radius: 8px; overflow: auto; }
 
-/* ---------- Toolbar ---------- */
+#chart { width: 100%; height: 100%; }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: #020617;
-  border-bottom: 1px solid #111827;
-  gap: 12px;
-}
-
-.toolbar-title {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.toolbar-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-button {
-  border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  background: #111827;
-  color: #e5e7eb;
-}
-
-button:hover {
-  background: #1f2937;
-}
-
-button:active {
-  background: #0f172a;
-}
-
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-.toggle input {
-  cursor: pointer;
-}
-
-/* ---------- Main split ---------- */
-
-.main {
-  flex: 1;
-  display: grid;
-  grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
-  min-height: 0;
-}
-
-.editor-panel {
-  border-right: 1px solid #111827;
-  background: #020617;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-}
-
-#steps {
-  flex: 1;
-  width: 100%;
-  resize: none;
-  border-radius: 8px;
-  border: 1px solid #111827;
-  background: #020617;
-  color: #e5e7eb;
-  padding: 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
-  font-size: 12px;
-}
-
-#steps:focus {
-  outline: 1px solid #2563eb;
-}
-
-/* ---------- Chart ---------- */
-
-.chart-panel {
-  background: #020617;
-  position: relative;
-  overflow: auto;
-}
-
-#chart {
-  width: 100%;
-  height: 100%;
-  display: block;
-  background: #020617;
-}
-
-/* default node look comes from JS via attributes; only overrides here */
-
-/* connector lines */
-.connector-line {
-  stroke: #4b5563;
-}
-
-/* ---------- Problem highlight ---------- */
-
-.node-group.problem-node rect,
-.node-group.problem-node path {
-  fill: #fecaca !important;   /* light red */
-  stroke: #b91c1c !important; /* deep red border */
-}
-
-.node-group.problem-node text {
-  fill: #111827 !important;
-}
-
-/* ---------- Syntax footer ---------- */
-
-#syntax {
-  padding: 6px 10px 8px;
-  border-top: 1px solid #111827;
-  background: #020617;
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-#syntax code {
-  background: #020617;
-  padding: 1px 4px;
-  border-radius: 4px;
-  font-size: 11px;
-}
+.node { stroke: #1d2233; stroke-width: 1.2; }
+.process { fill: var(--process); }
+.startend { fill: var(--ok); }
+.decision { fill: var(--decision); }
+text { font-size: 12px; fill: #111; dominant-baseline: middle; text-anchor: middle; }
+.label { fill: var(--muted); font-size: 12px; }
