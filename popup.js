@@ -637,12 +637,41 @@ chart.addEventListener('pointercancel', endCutDrag);
 // Click any node (box or diamond) to toggle "problem" state (red highlight)
 chart.addEventListener('click', (e) => {
   let el = e.target;
-  // Walk up to the node-group wrapper
+
+  // Walk up to the node-group wrapper (<g class="node-group">)
   while (el && el !== chart && !(el.classList && el.classList.contains('node-group'))) {
     el = el.parentNode;
   }
   if (!el || el === chart) return;
-  el.classList.toggle('problem-node');
+
+  // Find the main shape inside this node (rect for boxes, path for diamonds)
+  const shape = el.querySelector('rect, path');
+  if (!shape) return;
+
+  const isProblem = el.getAttribute('data-problem') === '1';
+
+  if (!isProblem) {
+    // Store original colours so we can restore later
+    shape.setAttribute('data-original-fill', shape.getAttribute('fill') || '');
+    shape.setAttribute('data-original-stroke', shape.getAttribute('stroke') || '');
+
+    // Turn node red
+    shape.setAttribute('fill', '#fecaca');
+    shape.setAttribute('stroke', '#b91c1c');
+
+    el.setAttribute('data-problem', '1');
+    el.classList.add('problem-node');   // optional CSS hook
+  } else {
+    // Restore original colours
+    const origFill = shape.getAttribute('data-original-fill');
+    const origStroke = shape.getAttribute('data-original-stroke');
+
+    if (origFill) shape.setAttribute('fill', origFill);
+    if (origStroke) shape.setAttribute('stroke', origStroke);
+
+    el.setAttribute('data-problem', '0');
+    el.classList.remove('problem-node');
+  }
 });
 
 // ============================== Export =====================================
