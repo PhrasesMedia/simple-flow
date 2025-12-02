@@ -5,7 +5,6 @@
 <title>Simple Flow – Flowchart Builder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Base styles -->
 <style>
   body {
     margin: 0;
@@ -23,7 +22,7 @@
     height: 100%;
   }
 
-  /* Left column (inputs) */
+  /* Left column */
   .left {
     width: 320px;
     background: #ffffff;
@@ -31,6 +30,11 @@
     padding: 16px;
     box-sizing: border-box;
     overflow-y: auto;
+  }
+
+  h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
   }
 
   textarea {
@@ -43,13 +47,9 @@
     resize: vertical;
   }
 
-  .controls {
-    margin-top: 12px;
-  }
-
   button {
     width: 100%;
-    margin-top: 6px;
+    margin-top: 8px;
     padding: 10px;
     background: #2563eb;
     color: white;
@@ -70,14 +70,15 @@
   }
 
   #syntax {
-    margin-top: 18px;
+    margin-top: 16px;
     padding: 12px;
     background: #f1f5f9;
     border-radius: 6px;
     font-size: 14px;
+    line-height: 1.4;
   }
 
-  /* Right chart panel */
+  /* Right side (chart) */
   .right {
     flex: 1;
     background: #1e1e1e;
@@ -89,9 +90,16 @@
     width: 100%;
     height: 100%;
     display: block;
-    background: transparent;
-    cursor: crosshair; /* encourages drawing/cutting feel */
+    cursor: crosshair;
   }
+
+  /* NEW: Click-to-mark-problem (turn step/decision red) */
+  #chart .node-group.problem-node rect,
+  #chart .node-group.problem-node path {
+    fill: #fecaca !important;   /* light red */
+    stroke: #b91c1c !important; /* deep red border */
+  }
+
 </style>
 </head>
 
@@ -109,20 +117,19 @@ Example:
 1. Start task
 D. Condition?
 Yes = Go here
-No = Go there"></textarea>
+No = Go there
+"></textarea>
 
     <label>
       <input type="checkbox" id="autoStartEnd" checked style="margin-right:6px;">
       Auto Start/End
     </label>
 
-    <div class="controls">
-      <button id="render">Render</button>
-      <button id="sample">Load Sample</button>
-      <button id="downloadPng">Download PNG</button>
-      <button id="copyPng">Copy PNG</button>
-      <button id="downloadSvg">Download SVG</button>
-    </div>
+    <button id="render">Render</button>
+    <button id="sample">Load Sample</button>
+    <button id="downloadPng">Download PNG</button>
+    <button id="copyPng">Copy PNG</button>
+    <button id="downloadSvg">Download SVG</button>
 
     <div id="syntax"></div>
   </div>
@@ -134,7 +141,7 @@ No = Go there"></textarea>
 
 </div>
 
-<!-- Load popup.js -->
+<!-- Load all logic -->
 <script src="popup.js"></script>
 
 </body>

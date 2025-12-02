@@ -236,8 +236,8 @@ function renderSVG(layoutData) {
   defs.appendChild(marker);
   chart.appendChild(defs);
 
-  const g = svg('g', {});
-  chart.appendChild(g);
+  const gRoot = svg('g', {});
+  chart.appendChild(gRoot);
 
   const centers = new Map();
   const drawText = (group, cx, cy, textStr, isLabel = false) => {
@@ -264,6 +264,7 @@ function renderSVG(layoutData) {
       'dominant-baseline': 'middle',
       fill: COLORS.branchUI,                         // white on dark UI
       'data-role': 'branch-label',                   // so we can flip on export
+      'data-branch-y': y,
       'font-family': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial'
     }, text);
     // subtle dark halo for readability on varied backgrounds
@@ -274,12 +275,12 @@ function renderSVG(layoutData) {
     // force fill with !important so CSS can't override
     t.style.setProperty('fill', COLORS.branchUI, 'important');
 
-    g.appendChild(t);
+    gRoot.appendChild(t);
   }
 
-  // >>> UPDATED: mark decision branch lines as connector-line
+  // Mark decision branch lines as connector-line
   function drawLabeledLine(a, b, label, sideBias = 0) {
-    g.appendChild(svg('line', {
+    gRoot.appendChild(svg('line', {
       x1: a.x,
       y1: a.y,
       x2: b.x,
@@ -295,9 +296,16 @@ function renderSVG(layoutData) {
     drawBranchLabel(midx, midy, label);
   }
 
-  // Nodes
+  // Nodes (wrapped in <g> so we can highlight + hide them)
   for (const p of placed) {
     if (p.kind === 'process' || p.kind === 'startend') {
+      const centerY = p.y + p.h / 2;
+      const nodeGroup = svg('g', {
+        'data-node-id': p.id,
+        'data-node-y': centerY,
+        class: `node-group node-${p.kind}`
+      });
+
       const rect = svg('rect', {
         x: p.x, y: p.y, width: p.w, height: p.h,
         rx: p.kind === 'startend' ? 24 : 12,
@@ -305,14 +313,30 @@ function renderSVG(layoutData) {
         fill: p.kind === 'startend' ? COLORS.startend : COLORS.process,
         stroke: COLORS.stroke, 'stroke-width': 1.2
       });
-      g.appendChild(rect);
-      drawText(g, p.x + p.w/2, p.y + p.h/2, p.text);
+      nodeGroup.appendChild(rect);
+      drawText(nodeGroup, p.x + p.w/2, p.y + p.h/2, p.text);
+
+      gRoot.appendChild(nodeGroup);
       centers.set(p.id, { top: { x: p.x + p.w/2, y: p.y }, bottom: { x: p.x + p.w/2, y: p.y + p.h } });
     }
     if (p.kind === 'decision') {
+      const centerY = p.y;
+      const nodeGroup = svg('g', {
+        'data-node-id': p.id,
+        'data-node-y': centerY,
+        class: 'node-group node-decision'
+      });
+
       const path = diamondPath(p.x, p.y, p.w, p.h);
-      g.appendChild(svg('path', { d: path, fill: COLORS.decision, stroke: COLORS.stroke, 'stroke-width': 1.2 }));
-      drawText(g, p.x, p.y, p.question);
+      nodeGroup.appendChild(svg('path', {
+        d: path,
+        fill: COLORS.decision,
+        stroke: COLORS.stroke,
+        'stroke-width': 1.2
+      }));
+      drawText(nodeGroup, p.x, p.y, p.question);
+
+      gRoot.appendChild(nodeGroup);
       centers.set(p.id, {
         top: { x: p.x, y: p.y - p.h/2 },
         bottom: { x: p.x, y: p.y + p.h/2 },
@@ -321,6 +345,21 @@ function renderSVG(layoutData) {
       });
     }
     if (p.kind === 'merge') {
+      // merge isn't really a "step", but we still track its center for connectors
+      const centerY = p.y;
+      const nodeGroup = svg('g', {
+        'data-node-id': p.id,
+        'data-node-y': centerY,
+        class: 'node-merge'
+      });
+      nodeGroup.appendChild(svg('circle', {
+        cx: p.x,
+        cy: p.y + 6,
+        r: 4,
+        fill: COLORS.stroke
+      }));
+      gRoot.appendChild(nodeGroup);
+
       centers.set(p.id, { top: { x: p.x, y: p.y - 1 }, bottom: { x: p.x, y: p.y + 1 } });
     }
   }
@@ -338,7 +377,7 @@ function renderSVG(layoutData) {
       if (right) drawLabeledLine(dec.right, centers.get(right.id).top, (cur.rightLabel || 'No'),  +1);
 
       if (merge && centers.get(left.id) && centers.get(merge.id))
-        g.appendChild(svg('line', {
+        gRoot.appendChild(svg('line', {
           x1: centers.get(left.id).bottom.x,
           y1: centers.get(left.id).bottom.y,
           x2: centers.get(merge.id).top.x,
@@ -350,7 +389,7 @@ function renderSVG(layoutData) {
           'data-connector': '1'
         }));
       if (merge && centers.get(right.id) && centers.get(merge.id))
-        g.appendChild(svg('line', {
+        gRoot.appendChild(svg('line', {
           x1: centers.get(right.id).bottom.x,
           y1: centers.get(right.id).bottom.y,
           x2: centers.get(merge.id).top.x,
@@ -363,7 +402,7 @@ function renderSVG(layoutData) {
         }));
 
       const prev = placed[i - 1];
-      if (prev) g.appendChild(svg('line', {
+      if (prev) gRoot.appendChild(svg('line', {
         x1: centers.get(prev.id).bottom.x,
         y1: centers.get(prev.id).bottom.y,
         x2: dec.top.x,
@@ -376,7 +415,7 @@ function renderSVG(layoutData) {
       }));
 
       const afterMerge = placed[i + 4];
-      if (afterMerge) g.appendChild(svg('line', {
+      if (afterMerge) gRoot.appendChild(svg('line', {
         x1: centers.get(merge.id).bottom.x,
         y1: centers.get(merge.id).bottom.y,
         x2: centers.get(afterMerge.id).top.x,
@@ -392,7 +431,7 @@ function renderSVG(layoutData) {
     } else {
       const a = centers.get(cur.id)?.bottom;
       const b = centers.get(nxt.id)?.top;
-      if (a && b) g.appendChild(svg('line', {
+      if (a && b) gRoot.appendChild(svg('line', {
         x1: a.x,
         y1: a.y,
         x2: b.x,
@@ -454,12 +493,44 @@ function render() {
   renderSVG(L);
 }
 
-// ================== Cut-connectors-by-drag interaction ==================
+// ================== Cut + prune-below-by-drag interaction ==================
 
 let isCutDragging = false;
 let activePointerId = null;
 
-// Helper: if pointer is over a connector line, remove it
+// Hide all nodes, lines, and branch labels below a Y cutoff
+function hideBelow(cutoffY) {
+  // Hide node groups
+  const groups = chart.querySelectorAll('.node-group');
+  groups.forEach(node => {
+    const y = parseFloat(node.getAttribute('data-node-y') || '0');
+    if (y >= cutoffY) {
+      node.style.display = 'none';
+    }
+  });
+
+  // Hide connector lines below cutoff
+  const lines = chart.querySelectorAll('line');
+  lines.forEach(line => {
+    const y1 = parseFloat(line.getAttribute('y1') || '0');
+    const y2 = parseFloat(line.getAttribute('y2') || '0');
+    const midY = (y1 + y2) / 2;
+    if (midY >= cutoffY) {
+      line.style.display = 'none';
+    }
+  });
+
+  // Hide branch labels below cutoff
+  const branchLabels = chart.querySelectorAll('[data-branch-y]');
+  branchLabels.forEach(lbl => {
+    const y = parseFloat(lbl.getAttribute('data-branch-y') || '0');
+    if (y >= cutoffY) {
+      lbl.style.display = 'none';
+    }
+  });
+}
+
+// Helper: if pointer is over a connector line, remove it and prune below it
 function cutAtPoint(clientX, clientY) {
   const el = document.elementFromPoint(clientX, clientY);
   if (!el) return;
@@ -469,9 +540,13 @@ function cutAtPoint(clientX, clientY) {
     el.tagName.toLowerCase() === 'line' &&
     el.getAttribute('data-connector') === '1'
   ) {
+    const y1 = parseFloat(el.getAttribute('y1') || '0');
+    const y2 = parseFloat(el.getAttribute('y2') || '0');
+    const cutoff = Math.max(y1, y2); // everything visually "below" the line
     if (el.parentNode) {
       el.parentNode.removeChild(el);
     }
+    hideBelow(cutoff);
   }
 }
 
@@ -506,6 +581,21 @@ function endCutDrag(e) {
 
 chart.addEventListener('pointerup', endCutDrag);
 chart.addEventListener('pointercancel', endCutDrag);
+
+// ================== Click-to-mark-problem interaction ==================
+
+// Click any node (box or diamond) to toggle "problem" state (red highlight)
+chart.addEventListener('click', (e) => {
+  let el = e.target;
+  // Walk up to the node-group wrapper
+  while (el && el !== chart && !el.classList?.contains('node-group')) {
+    el = el.parentNode;
+  }
+  if (!el || el === chart) return;
+
+  // Toggle the problem-node class
+  el.classList.toggle('problem-node');
+});
 
 // ============================== Export =====================================
 // Normalize + color-flip branch labels so exports are centered and readable.
