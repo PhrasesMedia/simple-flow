@@ -89,7 +89,7 @@ function parseLines(text, withStartEnd = true) {
 
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i] ?? '';
-    const trimmed = line.trim();
+       const trimmed = line.trim();
     if (!trimmed) continue;
 
     if (isInlineDecision(trimmed)) {
@@ -216,6 +216,51 @@ function layout(nodes) {
 
   const height = y + margin;
   return { placed, height, margin };
+}
+
+// ===================== Click-to-mark-problem helpers =======================
+
+// Attach click handler to a node group
+function attachNodeClick(nodeGroup) {
+  nodeGroup.addEventListener('click', handleNodeClick);
+}
+
+// Actual click handler for marking/unmarking problem nodes
+function handleNodeClick(e) {
+  // Don't let this bubble up and interfere with other handlers on the chart
+  e.stopPropagation();
+
+  const el = e.currentTarget; // <g class="node-group ...">
+  if (!el) return;
+
+  // Main visible shape inside the node (rect for process/start/end, path for diamond)
+  const shape = el.querySelector('rect, path');
+  if (!shape) return;
+
+  const isProblem = el.getAttribute('data-problem') === '1';
+
+  if (!isProblem) {
+    // Store original colours so exports can still work correctly
+    shape.setAttribute('data-original-fill', shape.getAttribute('fill') || '');
+    shape.setAttribute('data-original-stroke', shape.getAttribute('stroke') || '');
+
+    // Turn node red
+    shape.setAttribute('fill', '#fecaca');
+    shape.setAttribute('stroke', '#b91c1c');
+
+    el.setAttribute('data-problem', '1');
+    el.classList.add('problem-node');   // matches your CSS in index.html
+  } else {
+    // Restore original colours
+    const origFill = shape.getAttribute('data-original-fill');
+    const origStroke = shape.getAttribute('data-original-stroke');
+
+    if (origFill) shape.setAttribute('fill', origFill);
+    if (origStroke) shape.setAttribute('stroke', origStroke);
+
+    el.setAttribute('data-problem', '0');
+    el.classList.remove('problem-node');
+  }
 }
 
 // ============================== Render =====================================
@@ -345,6 +390,9 @@ function renderSVG(layoutData) {
       nodeGroup.appendChild(rect);
       drawText(nodeGroup, p.x + p.w / 2, p.y + p.h / 2, p.text);
 
+      // make the node clickable for problem-marking
+      attachNodeClick(nodeGroup);
+
       g.appendChild(nodeGroup);
       centers.set(p.id, {
         top: { x: p.x + p.w / 2, y: p.y },
@@ -368,6 +416,9 @@ function renderSVG(layoutData) {
         'stroke-width': 1.2
       }));
       drawText(nodeGroup, p.x, p.y, p.question);
+
+      // make the diamond clickable for problem-marking
+      attachNodeClick(nodeGroup);
 
       g.appendChild(nodeGroup);
       centers.set(p.id, {
@@ -631,48 +682,6 @@ function endCutDrag(e) {
 
 chart.addEventListener('pointerup', endCutDrag);
 chart.addEventListener('pointercancel', endCutDrag);
-
-// ================== Click-to-mark-problem interaction ==================
-
-// Click any node (box or diamond) to toggle "problem" state (red highlight)
-chart.addEventListener('click', (e) => {
-  let el = e.target;
-
-  // Walk up to the node-group wrapper (<g class="node-group">)
-  while (el && el !== chart && !(el.classList && el.classList.contains('node-group'))) {
-    el = el.parentNode;
-  }
-  if (!el || el === chart) return;
-
-  // Find the main shape inside this node (rect for boxes, path for diamonds)
-  const shape = el.querySelector('rect, path');
-  if (!shape) return;
-
-  const isProblem = el.getAttribute('data-problem') === '1';
-
-  if (!isProblem) {
-    // Store original colours so we can restore later
-    shape.setAttribute('data-original-fill', shape.getAttribute('fill') || '');
-    shape.setAttribute('data-original-stroke', shape.getAttribute('stroke') || '');
-
-    // Turn node red
-    shape.setAttribute('fill', '#fecaca');
-    shape.setAttribute('stroke', '#b91c1c');
-
-    el.setAttribute('data-problem', '1');
-    el.classList.add('problem-node');   // optional CSS hook
-  } else {
-    // Restore original colours
-    const origFill = shape.getAttribute('data-original-fill');
-    const origStroke = shape.getAttribute('data-original-stroke');
-
-    if (origFill) shape.setAttribute('fill', origFill);
-    if (origStroke) shape.setAttribute('stroke', origStroke);
-
-    el.setAttribute('data-problem', '0');
-    el.classList.remove('problem-node');
-  }
-});
 
 // ============================== Export =====================================
 // Normalize + color-flip branch labels so exports are centered and readable.
