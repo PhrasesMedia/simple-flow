@@ -149,7 +149,7 @@ function layout(nodes) {
   const placed = [];
   const measureText = (s) => {
     const lines = wrapText(s, 24).length;
-    const w = Math.max(boxMinW, Math.min(420, 14 * Math.min((s||'').length, 38) + 40));
+    const w = Math.max(boxMinW, Math.min(420, 14 * Math.min((s || '').length, 38) + 40));
     const h = Math.max(boxMinH, 24 * lines + 18);
     return { w, h };
   };
@@ -161,7 +161,7 @@ function layout(nodes) {
 
     if (n.type === 'process' || n.type === 'startend') {
       const { w, h } = measureText(n.text || n.question);
-      placed.push({ kind: n.type, text: n.text, x: centerX - w/2, y, w, h, id: i });
+      placed.push({ kind: n.type, text: n.text, x: centerX - w / 2, y, w, h, id: i });
       y += h + gapY;
       continue;
     }
@@ -173,15 +173,41 @@ function layout(nodes) {
       const diamondW = Math.max(qw, 180);
       const diamondH = Math.max(qh, 60);
 
-      const dec = { kind: 'decision', question: n.question, x: centerX, y, w: diamondW, h: diamondH, id: i, leftLabel: n.left.label, rightLabel: n.right.label };
+      const dec = {
+        kind: 'decision',
+        question: n.question,
+        x: centerX,
+        y,
+        w: diamondW,
+        h: diamondH,
+        id: i,
+        leftLabel: n.left.label,
+        rightLabel: n.right.label
+      };
       placed.push(dec);
 
       const leftBox  = measureText(n.left.text);
       const rightBox = measureText(n.right.text);
 
       const childY = y + diamondH + gapY; // equal space BELOW
-      placed.push({ kind: 'process', text: n.left.text,  x: centerX - (leftBox.w + gapX),  y: childY, w: leftBox.w,  h: leftBox.h,  id: i + ':L' });
-      placed.push({ kind: 'process', text: n.right.text, x: centerX + gapX,               y: childY, w: rightBox.w, h: rightBox.h, id: i + ':R' });
+      placed.push({
+        kind: 'process',
+        text: n.left.text,
+        x: centerX - (leftBox.w + gapX),
+        y: childY,
+        w: leftBox.w,
+        h: leftBox.h,
+        id: i + ':L'
+      });
+      placed.push({
+        kind: 'process',
+        text: n.right.text,
+        x: centerX + gapX,
+        y: childY,
+        w: rightBox.w,
+        h: rightBox.h,
+        id: i + ':R'
+      });
 
       y = childY + Math.max(leftBox.h, rightBox.h) + gapY;
       placed.push({ kind: 'merge', x: centerX, y, id: i + ':M' });
@@ -198,10 +224,10 @@ function renderSVG(layoutData) {
 
   // Compute content bounds
   const bounds = placed.reduce((b, p) => {
-    const left   = p.kind === 'decision' ? (p.x - p.w/2) : p.x;
-    const right  = p.kind === 'decision' ? (p.x + p.w/2) : (p.x + (p.w || 0));
-    const top    = p.kind === 'decision' ? (p.y - p.h/2) : p.y;
-    const bottom = p.kind === 'decision' ? (p.y + p.h/2) : (p.y + (p.h || 0));
+    const left   = p.kind === 'decision' ? (p.x - p.w / 2) : p.x;
+    const right  = p.kind === 'decision' ? (p.x + p.w / 2) : (p.x + (p.w || 0));
+    const top    = p.kind === 'decision' ? (p.y - p.h / 2) : p.y;
+    const bottom = p.kind === 'decision' ? (p.y + p.h / 2) : (p.y + (p.h || 0));
     b.minX = Math.min(b.minX, left);
     b.maxX = Math.max(b.maxX, right);
     b.minY = Math.min(b.minY, top);
@@ -212,8 +238,8 @@ function renderSVG(layoutData) {
   const PAD = 60;
   const vbX = Math.floor(bounds.minX - PAD);
   const vbY = Math.floor(bounds.minY - PAD);
-  const vbW = Math.ceil((bounds.maxX - bounds.minX) + PAD*2);
-  const vbH = Math.ceil((bounds.maxY - bounds.minY) + PAD*2);
+  const vbW = Math.ceil((bounds.maxX - bounds.minX) + PAD * 2);
+  const vbH = Math.ceil((bounds.maxY - bounds.minY) + PAD * 2);
 
   // Size SVG to its container
   const pane = chart.parentElement;
@@ -230,16 +256,23 @@ function renderSVG(layoutData) {
   // Arrowhead marker
   const defs = svg('defs', {});
   const marker = svg('marker', {
-    id: 'arrow', markerWidth: 10, markerHeight: 8, refX: 9, refY: 4, orient: 'auto', markerUnits: 'strokeWidth'
+    id: 'arrow',
+    markerWidth: 10,
+    markerHeight: 8,
+    refX: 9,
+    refY: 4,
+    orient: 'auto',
+    markerUnits: 'strokeWidth'
   });
   marker.appendChild(svg('path', { d: 'M0,0 L10,4 L0,8 z', fill: COLORS.arrow }));
   defs.appendChild(marker);
   chart.appendChild(defs);
 
-  const gRoot = svg('g', {});
-  chart.appendChild(gRoot);
+  const g = svg('g', {});
+  chart.appendChild(g);
 
   const centers = new Map();
+
   const drawText = (group, cx, cy, textStr, isLabel = false) => {
     const lines = wrapText(textStr, 24);
     lines.forEach((line, i) => {
@@ -264,23 +297,19 @@ function renderSVG(layoutData) {
       'dominant-baseline': 'middle',
       fill: COLORS.branchUI,                         // white on dark UI
       'data-role': 'branch-label',                   // so we can flip on export
-      'data-branch-y': y,
+      'data-branch-y': y,                            // for hideBelow()
       'font-family': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial'
     }, text);
-    // subtle dark halo for readability on varied backgrounds
     t.setAttribute('paint-order', 'stroke');
     t.setAttribute('stroke', '#00000080');
     t.setAttribute('stroke-width', '1');
-
-    // force fill with !important so CSS can't override
     t.style.setProperty('fill', COLORS.branchUI, 'important');
-
-    gRoot.appendChild(t);
+    g.appendChild(t);
   }
 
   // Mark decision branch lines as connector-line
   function drawLabeledLine(a, b, label, sideBias = 0) {
-    gRoot.appendChild(svg('line', {
+    g.appendChild(svg('line', {
       x1: a.x,
       y1: a.y,
       x2: b.x,
@@ -314,11 +343,15 @@ function renderSVG(layoutData) {
         stroke: COLORS.stroke, 'stroke-width': 1.2
       });
       nodeGroup.appendChild(rect);
-      drawText(nodeGroup, p.x + p.w/2, p.y + p.h/2, p.text);
+      drawText(nodeGroup, p.x + p.w / 2, p.y + p.h / 2, p.text);
 
-      gRoot.appendChild(nodeGroup);
-      centers.set(p.id, { top: { x: p.x + p.w/2, y: p.y }, bottom: { x: p.x + p.w/2, y: p.y + p.h } });
+      g.appendChild(nodeGroup);
+      centers.set(p.id, {
+        top: { x: p.x + p.w / 2, y: p.y },
+        bottom: { x: p.x + p.w / 2, y: p.y + p.h }
+      });
     }
+
     if (p.kind === 'decision') {
       const centerY = p.y;
       const nodeGroup = svg('g', {
@@ -336,31 +369,36 @@ function renderSVG(layoutData) {
       }));
       drawText(nodeGroup, p.x, p.y, p.question);
 
-      gRoot.appendChild(nodeGroup);
+      g.appendChild(nodeGroup);
       centers.set(p.id, {
-        top: { x: p.x, y: p.y - p.h/2 },
-        bottom: { x: p.x, y: p.y + p.h/2 },
-        left: { x: p.x - p.w/2, y: p.y },
-        right: { x: p.x + p.w/2, y: p.y }
+        top: { x: p.x, y: p.y - p.h / 2 },
+        bottom: { x: p.x, y: p.y + p.h / 2 },
+        left: { x: p.x - p.w / 2, y: p.y },
+        right: { x: p.x + p.w / 2, y: p.y }
       });
     }
+
     if (p.kind === 'merge') {
-      // merge isn't really a "step", but we still track its center for connectors
       const centerY = p.y;
       const nodeGroup = svg('g', {
         'data-node-id': p.id,
         'data-node-y': centerY,
         class: 'node-merge'
       });
+
       nodeGroup.appendChild(svg('circle', {
         cx: p.x,
         cy: p.y + 6,
         r: 4,
         fill: COLORS.stroke
       }));
-      gRoot.appendChild(nodeGroup);
 
-      centers.set(p.id, { top: { x: p.x, y: p.y - 1 }, bottom: { x: p.x, y: p.y + 1 } });
+      g.appendChild(nodeGroup);
+
+      centers.set(p.id, {
+        top: { x: p.x, y: p.y - 1 },
+        bottom: { x: p.x, y: p.y + 1 }
+      });
     }
   }
 
@@ -376,8 +414,8 @@ function renderSVG(layoutData) {
       if (left)  drawLabeledLine(dec.left,  centers.get(left.id).top,  (cur.leftLabel  || 'Yes'), -1);
       if (right) drawLabeledLine(dec.right, centers.get(right.id).top, (cur.rightLabel || 'No'),  +1);
 
-      if (merge && centers.get(left.id) && centers.get(merge.id))
-        gRoot.appendChild(svg('line', {
+      if (merge && centers.get(left.id) && centers.get(merge.id)) {
+        g.appendChild(svg('line', {
           x1: centers.get(left.id).bottom.x,
           y1: centers.get(left.id).bottom.y,
           x2: centers.get(merge.id).top.x,
@@ -388,8 +426,10 @@ function renderSVG(layoutData) {
           class: 'connector-line',
           'data-connector': '1'
         }));
-      if (merge && centers.get(right.id) && centers.get(merge.id))
-        gRoot.appendChild(svg('line', {
+      }
+
+      if (merge && centers.get(right.id) && centers.get(merge.id)) {
+        g.appendChild(svg('line', {
           x1: centers.get(right.id).bottom.x,
           y1: centers.get(right.id).bottom.y,
           x2: centers.get(merge.id).top.x,
@@ -400,48 +440,55 @@ function renderSVG(layoutData) {
           class: 'connector-line',
           'data-connector': '1'
         }));
+      }
 
       const prev = placed[i - 1];
-      if (prev) gRoot.appendChild(svg('line', {
-        x1: centers.get(prev.id).bottom.x,
-        y1: centers.get(prev.id).bottom.y,
-        x2: dec.top.x,
-        y2: dec.top.y,
-        stroke: COLORS.arrow,
-        'stroke-width': 1.6,
-        'marker-end': 'url(#arrow)',
-        class: 'connector-line',
-        'data-connector': '1'
-      }));
+      if (prev) {
+        g.appendChild(svg('line', {
+          x1: centers.get(prev.id).bottom.x,
+          y1: centers.get(prev.id).bottom.y,
+          x2: dec.top.x,
+          y2: dec.top.y,
+          stroke: COLORS.arrow,
+          'stroke-width': 1.6,
+          'marker-end': 'url(#arrow)',
+          class: 'connector-line',
+          'data-connector': '1'
+        }));
+      }
 
       const afterMerge = placed[i + 4];
-      if (afterMerge) gRoot.appendChild(svg('line', {
-        x1: centers.get(merge.id).bottom.x,
-        y1: centers.get(merge.id).bottom.y,
-        x2: centers.get(afterMerge.id).top.x,
-        y2: centers.get(afterMerge.id).top.y,
-        stroke: COLORS.arrow,
-        'stroke-width': 1.6,
-        'marker-end': 'url(#arrow)',
-        class: 'connector-line',
-        'data-connector': '1'
-      }));
+      if (afterMerge) {
+        g.appendChild(svg('line', {
+          x1: centers.get(merge.id).bottom.x,
+          y1: centers.get(merge.id).bottom.y,
+          x2: centers.get(afterMerge.id).top.x,
+          y2: centers.get(afterMerge.id).top.y,
+          stroke: COLORS.arrow,
+          'stroke-width': 1.6,
+          'marker-end': 'url(#arrow)',
+          class: 'connector-line',
+          'data-connector': '1'
+        }));
+      }
 
       i += 3;
     } else {
       const a = centers.get(cur.id)?.bottom;
       const b = centers.get(nxt.id)?.top;
-      if (a && b) gRoot.appendChild(svg('line', {
-        x1: a.x,
-        y1: a.y,
-        x2: b.x,
-        y2: b.y,
-        stroke: COLORS.arrow,
-        'stroke-width': 1.6,
-        'marker-end': 'url(#arrow)',
-        class: 'connector-line',
-        'data-connector': '1'
-      }));
+      if (a && b) {
+        g.appendChild(svg('line', {
+          x1: a.x,
+          y1: a.y,
+          x2: b.x,
+          y2: b.y,
+          stroke: COLORS.arrow,
+          'stroke-width': 1.6,
+          'marker-end': 'url(#arrow)',
+          class: 'connector-line',
+          'data-connector': '1'
+        }));
+      }
     }
   }
 
@@ -471,7 +518,7 @@ function svg(tag, attrs, textContent) {
   return el;
 }
 function diamondPath(cx, cy, w, h) {
-  return `M ${cx} ${cy - h/2} L ${cx + w/2} ${cy} L ${cx} ${cy + h/2} L ${cx - w/2} ${cy} Z`;
+  return `M ${cx} ${cy - h / 2} L ${cx + w / 2} ${cy} L ${cx} ${cy + h / 2} L ${cx - w / 2} ${cy} Z`;
 }
 function wrapText(s, maxWordsPerLine = 22) {
   const words = (s || '').split(/\s+/);
@@ -479,8 +526,11 @@ function wrapText(s, maxWordsPerLine = 22) {
   let cur = [];
   for (const w of words) {
     if ((cur.join(' ').length + w.length + 1) > maxWordsPerLine * 1.2) {
-      lines.push(cur.join(' ')); cur = [w];
-    } else cur.push(w);
+      lines.push(cur.join(' '));
+      cur = [w];
+    } else {
+      cur.push(w);
+    }
   }
   if (cur.length) lines.push(cur.join(' '));
   return lines;
@@ -500,7 +550,7 @@ let activePointerId = null;
 
 // Hide all nodes, lines, and branch labels below a Y cutoff
 function hideBelow(cutoffY) {
-  // Hide node groups
+  // Hide node groups (process/start/end/decisions)
   const groups = chart.querySelectorAll('.node-group');
   groups.forEach(node => {
     const y = parseFloat(node.getAttribute('data-node-y') || '0');
@@ -588,12 +638,10 @@ chart.addEventListener('pointercancel', endCutDrag);
 chart.addEventListener('click', (e) => {
   let el = e.target;
   // Walk up to the node-group wrapper
-  while (el && el !== chart && !el.classList?.contains('node-group')) {
+  while (el && el !== chart && !(el.classList && el.classList.contains('node-group'))) {
     el = el.parentNode;
   }
   if (!el || el === chart) return;
-
-  // Toggle the problem-node class
   el.classList.toggle('problem-node');
 });
 
