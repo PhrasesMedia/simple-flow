@@ -26,6 +26,10 @@ const COLORS = {
   branchExport: '#111111'   // Export color for Yes/No (white background)
 };
 
+// Keys for website persistence
+const LAST_INPUT_KEY = 'simpleFlow.lastInput';
+const LAST_AUTO_KEY  = 'simpleFlow.autoStartEnd';
+
 // Buttons
 document.getElementById('render').addEventListener('click', render);
 const sampleBtn = document.getElementById('sample');
@@ -53,32 +57,43 @@ function debounce(fn, delay = 250) {
 }
 const debouncedRender = debounce(render, 250);
 
-// Persist textarea/settings and auto-render on load (only in extension context)
-if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-  chrome.storage.local.get(['flow_input', 'auto_start_end'], ({flow_input, auto_start_end}) => {
-    if (typeof flow_input === 'string') stepsEl.value = flow_input;
-    if (typeof auto_start_end === 'boolean') autoStartEndEl.checked = auto_start_end;
-    updateSyntax();
-    if (stepsEl.value.trim()) render();
-  });
-} else {
-  // Website context: just init syntax and render if there is text
-  updateSyntax();
-  if (stepsEl.value.trim()) render();
-}
+// ========== Website init: load last input & settings from localStorage ======
+(function initFromLocalStorage() {
+  try {
+    const lastInput = window.localStorage.getItem(LAST_INPUT_KEY);
+    if (typeof lastInput === 'string') {
+      stepsEl.value = lastInput;
+    }
+    const lastAuto = window.localStorage.getItem(LAST_AUTO_KEY);
+    if (lastAuto !== null) {
+      autoStartEndEl.checked = lastAuto === '1';
+    }
+  } catch (e) {
+    console.warn('Could not read last input/autoStartEnd from localStorage', e);
+  }
 
-// Live render while typing + persist
+  updateSyntax();
+  if (stepsEl.value.trim()) {
+    render();
+  }
+})();
+
+// Live render while typing + persist (website)
 stepsEl.addEventListener('input', () => {
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.set({ flow_input: stepsEl.value });
+  try {
+    window.localStorage.setItem(LAST_INPUT_KEY, stepsEl.value);
+  } catch (e) {
+    console.warn('Could not persist last input', e);
   }
   debouncedRender();
 });
 
-// Toggle renders immediately
+// Toggle renders immediately + persist (website)
 autoStartEndEl.addEventListener('change', () => {
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.set({ auto_start_end: autoStartEndEl.checked });
+  try {
+    window.localStorage.setItem(LAST_AUTO_KEY, autoStartEndEl.checked ? '1' : '0');
+  } catch (e) {
+    console.warn('Could not persist autoStartEnd', e);
   }
   render();
 });
@@ -563,6 +578,8 @@ function updateSyntax() {
         <li><code>1.</code> = Step</li>
         <li><code>D.</code> = Decision &nbsp;<small>(use branches like <code>Yes = ...</code> / <code>No = ...</code>)</small></li>
         <li><code>[?]</code> = Inline decision &nbsp;<small>(e.g. <code>[?] Question | Yes -> A | No -> B</code>)</small></li>
+        <li>Click any node to mark it as a problem.</li>
+        <li>Drag across connector lines to cut and hide everything below.</li>
       </ul>
     </div>
   `;
@@ -577,13 +594,15 @@ function svg(tag, attrs, textContent) {
 function diamondPath(cx, cy, w, h) {
   return `M ${cx} ${cy - h / 2} L ${cx + w / 2} ${cy} L ${cx} ${cy + h / 2} L ${cx - w / 2} ${cy} Z`;
 }
-function wrapText(s, maxWordsPerLine = 22) {
+function wrapText(s, maxCharsPerLine = 22) {
   const words = (s || '').split(/\s+/);
   const lines = [];
   let cur = [];
   for (const w of words) {
-    if ((cur.join(' ').length + w.length + 1) > maxWordsPerLine * 1.2) {
-      lines.push(cur.join(' '));
+    const joined = cur.join(' ');
+    const newLen = (joined ? joined.length + 1 : 0) + w.length;
+    if (newLen > maxCharsPerLine * 1.2) {
+      if (cur.length) lines.push(joined);
       cur = [w];
     } else {
       cur.push(w);
@@ -769,7 +788,7 @@ function downloadSVG() {
 // NEW: copy PNG directly to clipboard
 function copyPNGToClipboard() {
   if (!navigator.clipboard || !window.ClipboardItem) {
-    alert('Copying images is not supported in this browser. Please use Export PNG instead.');
+    alert('Copying images is not supported in this browser. Please use Download PNG instead.');
     return;
   }
 
@@ -799,7 +818,7 @@ function copyPNGToClipboard() {
         alert('Flowchart copied to clipboard as an image.');
       } catch (err) {
         console.error(err);
-        alert('Could not copy image. Please use Export PNG instead.');
+        alert('Could not copy image. Please use Download PNG instead.');
       }
     });
   };
@@ -878,6 +897,10 @@ function sfSuggestNameFromSteps(text) {
 
 // Toggle saved block show/hide
 if (savedToggleEl && savedBlockEl) {
+  // WEBSITE: make it visible by default so the Save button is obvious
+  savedToggleEl.checked = true;
+  savedBlockEl.style.display = 'block';
+
   savedToggleEl.addEventListener('change', () => {
     savedBlockEl.style.display = savedToggleEl.checked ? 'block' : 'none';
   });
@@ -925,12 +948,12 @@ if (savedSelectEl) {
       autoStartEndEl.checked = !!flow.autoStartEnd;
     }
 
-    // Update chrome.storage so next popup open keeps it
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set({
-        flow_input: stepsEl.value,
-        auto_start_end: autoStartEndEl.checked
-      });
+    // Also persist as "last" input on website
+    try {
+      window.localStorage.setItem(LAST_INPUT_KEY, stepsEl.value);
+      window.localStorage.setItem(LAST_AUTO_KEY, autoStartEndEl.checked ? '1' : '0');
+    } catch (e) {
+      console.warn('Could not persist last values from saved flow', e);
     }
 
     render();
@@ -961,8 +984,5 @@ if (deleteFlowBtn) {
   });
 }
 
-// Initialise saved dropdown and first render
+// Initialise saved dropdown (and first render already happened in init)
 sfRefreshSavedDropdown();
-render();
-
-// ===========================================================================
