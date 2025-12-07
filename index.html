@@ -18,13 +18,14 @@
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
 
-    /* Wider chart, narrower text area */
+    /* Layout: textarea + chart area */
     .grid {
       display: grid;
       grid-template-columns: 0.33fr 0.67fr; /* ~1/3 text | 2/3 flowchart */
       gap: 12px;
       padding: 12px;
-      height: calc(100vh - 120px);
+      height: calc(100vh - 140px); /* header + compare row + footer */
+      box-sizing: border-box;
     }
 
     #steps {
@@ -38,6 +39,7 @@
       color: var(--text);
       font-size: 14px;
       line-height: 1.35;
+      box-sizing: border-box;
     }
 
     #canvasWrap {
@@ -46,7 +48,22 @@
       background: #0e1017;
       border: 1px solid #23283a;
       border-radius: 8px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    #singleChartWrap {
+      width: 100%;
+      height: 100%;
       overflow: auto;
+    }
+
+    #chart,
+    #chartA,
+    #chartB {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     footer {
@@ -55,12 +72,19 @@
       border-top: 1px solid #222533;
     }
 
-    /* Save / load controls in header */
+    /* Header toolbar */
     header .row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 8px;
+      padding: 8px 12px 4px 12px;
+    }
+
+    header h1 {
+      margin: 0;
+      padding: 8px 12px 0 12px;
+      font-size: 18px;
     }
 
     header .row .save-group {
@@ -77,7 +101,75 @@
       background: #10121a;
       color: var(--text);
       font-size: 13px;
+      min-width: 200px;
+    }
+
+    /* Compare bar under header */
+    .compare-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px 8px 12px;
+      font-size: 13px;
+      border-bottom: 1px solid #222533;
+      background: var(--panel);
+    }
+
+    .compare-row select {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #3b4256;
+      background: #10121a;
+      color: var(--text);
+      font-size: 13px;
       min-width: 180px;
+    }
+
+    .compare-row button {
+      font-size: 13px;
+    }
+
+    /* Compare charts layout */
+    #compareWrap {
+      width: 100%;
+      height: 100%;
+      display: none; /* default hidden */
+    }
+
+    .compare-charts {
+      display: flex;
+      height: 100%;
+      gap: 8px;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+
+    .compare-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-radius: 6px;
+      border: 1px solid #23283a;
+      overflow: hidden;
+      background: #0b0d13;
+    }
+
+    .compare-title {
+      padding: 6px 10px;
+      font-size: 13px;
+      color: #9ca3af;
+      border-bottom: 1px solid #23283a;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .compare-column svg {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      display: block;
     }
   </style>
 </head>
@@ -95,7 +187,7 @@
 
       <button id="render">Render</button>
 
-      <!-- NEW: Save / Load controls -->
+      <!-- Save / Load controls -->
       <div class="save-group">
         <button id="saveFlowBtn" type="button">Save</button>
         <select id="savedSelect">
@@ -103,11 +195,24 @@
         </select>
         <button id="deleteFlowBtn" type="button">Delete</button>
       </div>
-      <!-- END NEW -->
 
       <button id="downloadPng">Export PNG</button>
       <button id="downloadSvg">Export SVG</button>
       <button id="copyPng">Copy image</button> <!-- Copy button -->
+    </div>
+
+    <!-- Compare bar -->
+    <div class="compare-row">
+      <span>Compare:</span>
+      <select id="compareSelectA">
+        <option value="">Pick first flow</option>
+      </select>
+      <span>vs</span>
+      <select id="compareSelectB">
+        <option value="">Pick second flow</option>
+      </select>
+      <button id="compareRunBtn" type="button">Show</button>
+      <button id="compareClearBtn" type="button">Clear</button>
     </div>
   </header>
 
@@ -127,7 +232,24 @@ Decision block (D.):
 "></textarea>
 
     <div id="canvasWrap">
-      <svg id="chart" xmlns="http://www.w3.org/2000/svg"></svg>
+      <!-- Normal single-chart mode -->
+      <div id="singleChartWrap">
+        <svg id="chart" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+
+      <!-- Compare mode: two charts side-by-side -->
+      <div id="compareWrap">
+        <div class="compare-charts">
+          <div class="compare-column">
+            <div class="compare-title" id="compareTitleA"></div>
+            <svg id="chartA" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          <div class="compare-column">
+            <div class="compare-title" id="compareTitleB"></div>
+            <svg id="chartB" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 

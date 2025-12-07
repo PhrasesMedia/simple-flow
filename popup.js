@@ -7,11 +7,21 @@ const autoStartEndEl = document.getElementById('autoStartEnd');
 const syntaxEl = document.getElementById('syntax'); // syntax/key panel
 
 // Saved flows DOM refs
-const savedToggleEl = document.getElementById('savedToggle');
-const savedBlockEl  = document.getElementById('savedBlock');
 const saveFlowBtn   = document.getElementById('saveFlowBtn');
 const deleteFlowBtn = document.getElementById('deleteFlowBtn');
 const savedSelectEl = document.getElementById('savedSelect');
+
+// Compare-mode DOM refs
+const singleChartWrapEl = document.getElementById('singleChartWrap');
+const compareWrapEl     = document.getElementById('compareWrap');
+const chartAEl          = document.getElementById('chartA');
+const chartBEl          = document.getElementById('chartB');
+const compareTitleAEl   = document.getElementById('compareTitleA');
+const compareTitleBEl   = document.getElementById('compareTitleB');
+const compareSelectAEl  = document.getElementById('compareSelectA');
+const compareSelectBEl  = document.getElementById('compareSelectB');
+const compareRunBtn     = document.getElementById('compareRunBtn');
+const compareClearBtn   = document.getElementById('compareClearBtn');
 
 // Palette (explicit fills so PNG/SVG export preserves colors)
 const COLORS = {
@@ -285,8 +295,9 @@ function handleNodeClick(e) {
 }
 
 // ============================== Render =====================================
-function renderSVG(layoutData) {
+function renderSVG(targetSvg, layoutData, options = { interactive: true }) {
   const { placed, height } = layoutData;
+  const interactive = !!options.interactive;
 
   // Compute content bounds
   const bounds = placed.reduce((b, p) => {
@@ -308,16 +319,16 @@ function renderSVG(layoutData) {
   const vbH = Math.ceil((bounds.maxY - bounds.minY) + PAD * 2);
 
   // Size SVG to its container
-  const pane = chart.parentElement;
+  const pane = targetSvg.parentElement;
   const paneW = Math.max(320, pane.clientWidth  || 800);
   const paneH = Math.max(240, pane.clientHeight || 600);
 
-  chart.innerHTML = '';
-  chart.setAttribute('width', paneW);
-  chart.setAttribute('height', paneH);
-  chart.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
-  chart.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-  chart.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  targetSvg.innerHTML = '';
+  targetSvg.setAttribute('width', paneW);
+  targetSvg.setAttribute('height', paneH);
+  targetSvg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+  targetSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  targetSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
   // Arrowhead marker
   const defs = svg('defs', {});
@@ -332,10 +343,10 @@ function renderSVG(layoutData) {
   });
   marker.appendChild(svg('path', { d: 'M0,0 L10,4 L0,8 z', fill: COLORS.arrow }));
   defs.appendChild(marker);
-  chart.appendChild(defs);
+  targetSvg.appendChild(defs);
 
   const g = svg('g', {});
-  chart.appendChild(g);
+  targetSvg.appendChild(g);
 
   const centers = new Map();
 
@@ -411,8 +422,9 @@ function renderSVG(layoutData) {
       nodeGroup.appendChild(rect);
       drawText(nodeGroup, p.x + p.w / 2, p.y + p.h / 2, p.text);
 
-      // make the node clickable for problem-marking
-      attachNodeClick(nodeGroup);
+      if (interactive) {
+        attachNodeClick(nodeGroup);
+      }
 
       g.appendChild(nodeGroup);
       centers.set(p.id, {
@@ -438,8 +450,9 @@ function renderSVG(layoutData) {
       }));
       drawText(nodeGroup, p.x, p.y, p.question);
 
-      // make the diamond clickable for problem-marking
-      attachNodeClick(nodeGroup);
+      if (interactive) {
+        attachNodeClick(nodeGroup);
+      }
 
       g.appendChild(nodeGroup);
       centers.set(p.id, {
@@ -564,8 +577,17 @@ function renderSVG(layoutData) {
     }
   }
 
-  // Update syntax panel with the Key
-  updateSyntax();
+  // Only the main chart updates the syntax panel
+  if (targetSvg === chart) {
+    updateSyntax();
+  }
+}
+
+// Render helper for the main chart
+function render() {
+  const nodes = parseLines(stepsEl.value, autoStartEndEl.checked);
+  const L = layout(nodes);
+  renderSVG(chart, L, { interactive: true });
 }
 
 // ============================= Utilities ===================================
@@ -610,13 +632,6 @@ function wrapText(s, maxCharsPerLine = 22) {
   }
   if (cur.length) lines.push(cur.join(' '));
   return lines;
-}
-
-// ============================== Orchestration ===============================
-function render() {
-  const nodes = parseLines(stepsEl.value, autoStartEndEl.checked);
-  const L = layout(nodes);
-  renderSVG(L);
 }
 
 // ================== Cut + prune-below-by-drag interaction ==================
@@ -853,19 +868,14 @@ function sfSetSavedFlows(flows) {
   }
 }
 
-function sfRefreshSavedDropdown(activeId) {
-  if (!savedSelectEl) return;
+function sfFillSelect(selectEl, flows, placeholder) {
+  if (!selectEl) return;
+  selectEl.innerHTML = '';
 
-  const flows = sfGetSavedFlows();
-  savedSelectEl.innerHTML = '';
-
-  if (!flows.length) {
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = 'No saved flows yet';
-    savedSelectEl.appendChild(opt);
-    return;
-  }
+  const baseOpt = document.createElement('option');
+  baseOpt.value = '';
+  baseOpt.textContent = placeholder;
+  selectEl.appendChild(baseOpt);
 
   flows.forEach(flow => {
     const opt = document.createElement('option');
@@ -875,10 +885,18 @@ function sfRefreshSavedDropdown(activeId) {
       ? ''
       : ` – ${d.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })}`;
     opt.textContent = `${flow.name}${dateLabel}`;
-    savedSelectEl.appendChild(opt);
+    selectEl.appendChild(opt);
   });
+}
 
-  if (activeId) {
+function sfRefreshSavedDropdown(activeId) {
+  const flows = sfGetSavedFlows();
+
+  sfFillSelect(savedSelectEl, flows, flows.length ? 'Select a saved flow' : 'No saved flows yet');
+  sfFillSelect(compareSelectAEl, flows, 'Pick first flow');
+  sfFillSelect(compareSelectBEl, flows, 'Pick second flow');
+
+  if (savedSelectEl && activeId) {
     savedSelectEl.value = String(activeId);
   }
 }
@@ -893,17 +911,6 @@ function sfSuggestNameFromSteps(text) {
 
   const first = lines[0].replace(/^\d+[\.\)]\s*/, '');
   return first || 'Untitled flow';
-}
-
-// Toggle saved block show/hide
-if (savedToggleEl && savedBlockEl) {
-  // WEBSITE: make it visible by default so the Save button is obvious
-  savedToggleEl.checked = true;
-  savedBlockEl.style.display = 'block';
-
-  savedToggleEl.addEventListener('change', () => {
-    savedBlockEl.style.display = savedToggleEl.checked ? 'block' : 'none';
-  });
 }
 
 // Save current flow
@@ -948,7 +955,7 @@ if (savedSelectEl) {
       autoStartEndEl.checked = !!flow.autoStartEnd;
     }
 
-    // Also persist as "last" input on website
+    // Persist as "last" input on website
     try {
       window.localStorage.setItem(LAST_INPUT_KEY, stepsEl.value);
       window.localStorage.setItem(LAST_AUTO_KEY, autoStartEndEl.checked ? '1' : '0');
@@ -984,5 +991,71 @@ if (deleteFlowBtn) {
   });
 }
 
-// Initialise saved dropdown (and first render already happened in init)
+// Initialise saved dropdown
 sfRefreshSavedDropdown();
+
+// ============================== Compare mode ===============================
+
+function showCompareMode() {
+  if (!singleChartWrapEl || !compareWrapEl) return;
+  singleChartWrapEl.style.display = 'none';
+  compareWrapEl.style.display = 'block';
+}
+
+function clearCompareMode() {
+  if (!singleChartWrapEl || !compareWrapEl) return;
+  compareWrapEl.style.display = 'none';
+  singleChartWrapEl.style.display = 'block';
+
+  if (chartAEl) chartAEl.innerHTML = '';
+  if (chartBEl) chartBEl.innerHTML = '';
+  if (compareTitleAEl) compareTitleAEl.textContent = '';
+  if (compareTitleBEl) compareTitleBEl.textContent = '';
+}
+
+function renderCompareChart(targetSvg, titleEl, flow) {
+  if (!targetSvg || !flow) return;
+
+  if (titleEl) {
+    titleEl.textContent = flow.name || '';
+  }
+
+  const nodes = parseLines(flow.steps || '', !!flow.autoStartEnd);
+  const L = layout(nodes);
+  renderSVG(targetSvg, L, { interactive: false });
+}
+
+if (compareRunBtn) {
+  compareRunBtn.addEventListener('click', () => {
+    const idA = Number(compareSelectAEl?.value || '');
+    const idB = Number(compareSelectBEl?.value || '');
+
+    if (!idA || !idB) {
+      alert('Please choose two saved flows to compare.');
+      return;
+    }
+    if (idA === idB) {
+      alert('Please choose two different flows.');
+      return;
+    }
+
+    const flows = sfGetSavedFlows();
+    const flowA = flows.find(f => f.id === idA);
+    const flowB = flows.find(f => f.id === idB);
+
+    if (!flowA || !flowB) {
+      alert('Could not find one of the selected flows.');
+      return;
+    }
+
+    showCompareMode();
+    renderCompareChart(chartAEl, compareTitleAEl, flowA);
+    renderCompareChart(chartBEl, compareTitleBEl, flowB);
+  });
+}
+
+if (compareClearBtn) {
+  compareClearBtn.addEventListener('click', () => {
+    clearCompareMode();
+  });
+}
