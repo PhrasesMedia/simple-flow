@@ -106,7 +106,7 @@
 
     /* Compare bar under header */
     .compare-row {
-      display: flex;
+      display: none; /* hidden until Compare clicked */
       flex-wrap: wrap;
       align-items: center;
       gap: 8px;
@@ -196,12 +196,15 @@
         <button id="deleteFlowBtn" type="button">Delete</button>
       </div>
 
+      <!-- Toggle to show compare UI -->
+      <button id="compareToggleBtn" type="button">Compare</button>
+
       <button id="downloadPng">Export PNG</button>
       <button id="downloadSvg">Export SVG</button>
       <button id="copyPng">Copy image</button> <!-- Copy button -->
     </div>
 
-    <!-- Compare bar -->
+    <!-- Compare bar (hidden until Compare clicked) -->
     <div class="compare-row">
       <span>Compare:</span>
       <select id="compareSelectA">

@@ -22,6 +22,8 @@ const compareSelectAEl  = document.getElementById('compareSelectA');
 const compareSelectBEl  = document.getElementById('compareSelectB');
 const compareRunBtn     = document.getElementById('compareRunBtn');
 const compareClearBtn   = document.getElementById('compareClearBtn');
+const compareRowEl      = document.querySelector('.compare-row');
+const compareToggleBtn  = document.getElementById('compareToggleBtn');
 
 // Palette (explicit fills so PNG/SVG export preserves colors)
 const COLORS = {
@@ -265,23 +267,20 @@ function handleNodeClick(e) {
   const el = e.currentTarget; // <g class="node-group ...">
   if (!el) return;
 
-  // Main visible shape inside the node (rect for process/start/end, path for diamond)
   const shape = el.querySelector('rect, path');
   if (!shape) return;
 
   const isProblem = el.getAttribute('data-problem') === '1';
 
   if (!isProblem) {
-    // Store original colours so we can restore later
     shape.setAttribute('data-original-fill', shape.getAttribute('fill') || '');
     shape.setAttribute('data-original-stroke', shape.getAttribute('stroke') || '');
 
-    // Turn node red
     shape.setAttribute('fill', '#fecaca');
     shape.setAttribute('stroke', '#b91c1c');
 
     el.setAttribute('data-problem', '1');
-    el.classList.add('problem-node');   // hook for CSS if you want
+    el.classList.add('problem-node');
   } else {
     const origFill = shape.getAttribute('data-original-fill');
     const origStroke = shape.getAttribute('data-original-stroke');
@@ -372,9 +371,9 @@ function renderSVG(targetSvg, layoutData, options = { interactive: true }) {
       'font-weight': '600',
       'text-anchor': 'middle',
       'dominant-baseline': 'middle',
-      fill: COLORS.branchUI,                         // white on dark UI
-      'data-role': 'branch-label',                   // so we can flip on export
-      'data-branch-y': y,                            // for hideBelow()
+      fill: COLORS.branchUI,
+      'data-role': 'branch-label',
+      'data-branch-y': y,
       'font-family': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial'
     }, text);
     t.setAttribute('paint-order', 'stroke');
@@ -384,7 +383,6 @@ function renderSVG(targetSvg, layoutData, options = { interactive: true }) {
     g.appendChild(t);
   }
 
-  // Mark decision branch lines as connector-line
   function drawLabeledLine(a, b, label, sideBias = 0) {
     g.appendChild(svg('line', {
       x1: a.x,
@@ -402,7 +400,7 @@ function renderSVG(targetSvg, layoutData, options = { interactive: true }) {
     drawBranchLabel(midx, midy, label);
   }
 
-  // Nodes (wrapped in <g> so we can highlight + hide them)
+  // Nodes
   for (const p of placed) {
     if (p.kind === 'process' || p.kind === 'startend') {
       const centerY = p.y + p.h / 2;
@@ -422,9 +420,7 @@ function renderSVG(targetSvg, layoutData, options = { interactive: true }) {
       nodeGroup.appendChild(rect);
       drawText(nodeGroup, p.x + p.w / 2, p.y + p.h / 2, p.text);
 
-      if (interactive) {
-        attachNodeClick(nodeGroup);
-      }
+      if (interactive) attachNodeClick(nodeGroup);
 
       g.appendChild(nodeGroup);
       centers.set(p.id, {
@@ -450,9 +446,7 @@ function renderSVG(targetSvg, layoutData, options = { interactive: true }) {
       }));
       drawText(nodeGroup, p.x, p.y, p.question);
 
-      if (interactive) {
-        attachNodeClick(nodeGroup);
-      }
+      if (interactive) attachNodeClick(nodeGroup);
 
       g.appendChild(nodeGroup);
       centers.set(p.id, {
@@ -487,7 +481,7 @@ function renderSVG(targetSvg, layoutData, options = { interactive: true }) {
     }
   }
 
-  // Connectors (with Yes/No labels for decisions)
+  // Connectors
   for (let i = 0; i < placed.length - 1; i++) {
     const cur = placed[i], nxt = placed[i + 1];
     if (cur.kind === 'decision') {
@@ -577,13 +571,11 @@ function renderSVG(targetSvg, layoutData, options = { interactive: true }) {
     }
   }
 
-  // Only the main chart updates the syntax panel
   if (targetSvg === chart) {
     updateSyntax();
   }
 }
 
-// Render helper for the main chart
 function render() {
   const nodes = parseLines(stepsEl.value, autoStartEndEl.checked);
   const L = layout(nodes);
@@ -639,39 +631,28 @@ function wrapText(s, maxCharsPerLine = 22) {
 let isCutDragging = false;
 let activePointerId = null;
 
-// Hide all nodes, lines, and branch labels below a Y cutoff
 function hideBelow(cutoffY) {
-  // Hide node groups (process/start/end/decisions)
   const groups = chart.querySelectorAll('.node-group');
   groups.forEach(node => {
     const y = parseFloat(node.getAttribute('data-node-y') || '0');
-    if (y >= cutoffY) {
-      node.style.display = 'none';
-    }
+    if (y >= cutoffY) node.style.display = 'none';
   });
 
-  // Hide connector lines below cutoff
   const lines = chart.querySelectorAll('line');
   lines.forEach(line => {
     const y1 = parseFloat(line.getAttribute('y1') || '0');
     const y2 = parseFloat(line.getAttribute('y2') || '0');
     const midY = (y1 + y2) / 2;
-    if (midY >= cutoffY) {
-      line.style.display = 'none';
-    }
+    if (midY >= cutoffY) line.style.display = 'none';
   });
 
-  // Hide branch labels below cutoff
   const branchLabels = chart.querySelectorAll('[data-branch-y]');
   branchLabels.forEach(lbl => {
     const y = parseFloat(lbl.getAttribute('data-branch-y') || '0');
-    if (y >= cutoffY) {
-      lbl.style.display = 'none';
-    }
+    if (y >= cutoffY) lbl.style.display = 'none';
   });
 }
 
-// Helper: if pointer is over a connector line, remove it and prune below it
 function cutAtPoint(clientX, clientY) {
   const el = document.elementFromPoint(clientX, clientY);
   if (!el) return;
@@ -683,17 +664,14 @@ function cutAtPoint(clientX, clientY) {
   ) {
     const y1 = parseFloat(el.getAttribute('y1') || '0');
     const y2 = parseFloat(el.getAttribute('y2') || '0');
-    const cutoff = Math.max(y1, y2); // everything visually "below" the line
-    if (el.parentNode) {
-      el.parentNode.removeChild(el);
-    }
+    const cutoff = Math.max(y1, y2);
+    if (el.parentNode) el.parentNode.removeChild(el);
     hideBelow(cutoff);
   }
 }
 
-// Start cutting ONLY when pointer goes down on a connector line
 chart.addEventListener('pointerdown', (e) => {
-  if (e.button !== 0) return; // only left/primary button
+  if (e.button !== 0) return;
 
   const t = e.target;
   const isConnector =
@@ -702,7 +680,6 @@ chart.addEventListener('pointerdown', (e) => {
     t.tagName.toLowerCase() === 'line' &&
     t.getAttribute('data-connector') === '1';
 
-  // If not on a connector line, don't start cut-drag; allow normal node clicks
   if (!isConnector) return;
 
   isCutDragging = true;
@@ -723,47 +700,40 @@ function endCutDrag(e) {
   activePointerId = null;
   try {
     chart.releasePointerCapture(e.pointerId);
-  } catch (_) {
-    // ignore if capture wasn't set
-  }
+  } catch (_) {}
 }
 
 chart.addEventListener('pointerup', endCutDrag);
 chart.addEventListener('pointercancel', endCutDrag);
 
 // ============================== Export =====================================
-// Normalize + color-flip branch labels so exports are centered and readable.
+
 function normalizeSVGForExport(srcSvg) {
   const vb = srcSvg.viewBox.baseVal;
   const clone = srcSvg.cloneNode(true);
 
-  // standardize geometry
   clone.setAttribute('width', vb.width);
   clone.setAttribute('height', vb.height);
   clone.setAttribute('viewBox', `0 0 ${vb.width} ${vb.height}`);
 
-  // translate content to 0,0
   const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   wrapper.setAttribute('transform', `translate(${-vb.x}, ${-vb.y})`);
   while (clone.firstChild) wrapper.appendChild(clone.firstChild);
   clone.appendChild(wrapper);
 
-  // flip branch label color to export color
   const labels = clone.querySelectorAll('[data-role="branch-label"]');
   labels.forEach(el => {
     el.setAttribute('fill', COLORS.branchExport);
-    el.setAttribute('stroke', '#ffffff00'); // remove halo on export
+    el.setAttribute('stroke', '#ffffff00');
     el.style.setProperty('fill', COLORS.branchExport, 'important');
   });
 
   return { clone, width: vb.width, height: vb.height };
 }
 
-// PNG: white background for export to avoid dark-mode inversion.
 function downloadPNG() {
   const { clone, width, height } = normalizeSVGForExport(chart);
 
-  // white background
   const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   bg.setAttribute('x', 0); bg.setAttribute('y', 0);
   bg.setAttribute('width', width); bg.setAttribute('height', height);
@@ -787,7 +757,6 @@ function downloadPNG() {
 function downloadSVG() {
   const { clone, width, height } = normalizeSVGForExport(chart);
 
-  // white background
   const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   bg.setAttribute('x', 0); bg.setAttribute('y', 0);
   bg.setAttribute('width', width); bg.setAttribute('height', height);
@@ -800,7 +769,6 @@ function downloadSVG() {
   triggerDownload(URL.createObjectURL(blob), 'flowchart.svg');
 }
 
-// NEW: copy PNG directly to clipboard
 function copyPNGToClipboard() {
   if (!navigator.clipboard || !window.ClipboardItem) {
     alert('Copying images is not supported in this browser. Please use Download PNG instead.');
@@ -809,7 +777,6 @@ function copyPNGToClipboard() {
 
   const { clone, width, height } = normalizeSVGForExport(chart);
 
-  // white background
   const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   bg.setAttribute('x', 0); bg.setAttribute('y', 0);
   bg.setAttribute('width', width); bg.setAttribute('height', height);
@@ -955,7 +922,6 @@ if (savedSelectEl) {
       autoStartEndEl.checked = !!flow.autoStartEnd;
     }
 
-    // Persist as "last" input on website
     try {
       window.localStorage.setItem(LAST_INPUT_KEY, stepsEl.value);
       window.localStorage.setItem(LAST_AUTO_KEY, autoStartEndEl.checked ? '1' : '0');
@@ -991,7 +957,6 @@ if (deleteFlowBtn) {
   });
 }
 
-// Initialise saved dropdown
 sfRefreshSavedDropdown();
 
 // ============================== Compare mode ===============================
@@ -1023,6 +988,22 @@ function renderCompareChart(targetSvg, titleEl, flow) {
   const nodes = parseLines(flow.steps || '', !!flow.autoStartEnd);
   const L = layout(nodes);
   renderSVG(targetSvg, L, { interactive: false });
+}
+
+// Toggle visibility of the compare row
+if (compareToggleBtn && compareRowEl) {
+  compareToggleBtn.addEventListener('click', () => {
+    const isHidden =
+      compareRowEl.style.display === '' ||
+      compareRowEl.style.display === 'none';
+
+    if (isHidden) {
+      compareRowEl.style.display = 'flex';
+    } else {
+      compareRowEl.style.display = 'none';
+      clearCompareMode();
+    }
+  });
 }
 
 if (compareRunBtn) {
